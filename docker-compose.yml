@@ -1,0 +1,149 @@
+services:
+  # ===============================
+  # POSTGRES (CDC ENABLED)
+  # ===============================
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    networks:
+      - banking-network
+    environment:
+      POSTGRES_DB: banking
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    command: ["postgres", "-c", "wal_level=logical"]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d banking"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ===============================
+  # ZOOKEEPER (LIGHT MODE)
+  # ===============================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    networks:
+      - banking-network
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    mem_limit: 256m
+
+  # ===============================
+  # KAFKA BROKER (DEV OPTIMIZED)
+  # ===============================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    networks:
+      - banking-network
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    mem_limit: 1g
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://127.0.0.1:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ===============================
+  # DEBEZIUM / KAFKA CONNECT (LIMITED)
+  # ===============================
+  debezium-connect:
+    image: debezium/connect:2.6
+    container_name: debezium-connect
+    networks:
+      - banking-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    mem_limit: 768m
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: debezium_configs
+      OFFSET_STORAGE_TOPIC: debezium_offsets
+      STATUS_STORAGE_TOPIC: debezium_status
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+
+  # ===============================
+  # MINIO (LIGHT)
+  # ===============================
+  minio:
+    image: minio/minio
+    container_name: minio
+    networks:
+      - banking-network
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    mem_limit: 512m
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+
+  # ===============================
+  # AIRFLOW (RESOURCES TUNED)
+  # ===============================
+  airflow:
+    image: shees-airflow-custom
+    container_name: airflow
+    networks:
+      - banking-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8080"
+    mem_limit: 1536m  # Thori si barha di taake scheduler crash na ho
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://admin:admin@postgres/banking
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__FERNET_KEY=WLsEow5t6-pxqhsySBwy75dLRpLS7A4hBY_Up8o59H4=
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
+      - AIRFLOW__CORE__TEST_CONNECTION=Enabled
+      - AIRFLOW__WEBSERVER__WEB_SERVER_MASTER_TIMEOUT=300
+      - AIRFLOW__CORE__DAG_LOG_FETCH_TIMEOUT=30
+      - AIRFLOW__CORE__PARALLELISM=2
+      - AIRFLOW__CORE__DAG_CONCURRENCY=1
+      - AIRFLOW__SCHEDULER__MAX_THREADS=1  # 8GB RAM ke liye 1 thread behtar hai
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create --username admin --password admin --firstname Shees --lastname Ali --role Admin --email sheesaliakbar@gmail.com || true;
+      airflow scheduler & exec airflow webserver"
+
+
+networks:
+  banking-network:
+    driver: bridge

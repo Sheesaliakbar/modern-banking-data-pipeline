@@ -1,0 +1,9 @@
+FROM apache/airflow:2.8.4
+
+# Libraries jo humein Snowflake aur MinIO ke liye chahiye
+RUN pip install --no-cache-dir \
+    apache-airflow-providers-snowflake \
+    snowflake-connector-python \
+    pandas \
+    pyarrow \
+    boto3

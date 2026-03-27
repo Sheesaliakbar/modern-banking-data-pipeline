@@ -1,0 +1,13 @@
+banking_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: gpicoyy-to56673
+      user: SHEESALIAKBAR
+      password: "0336Ali7536@123"
+      role: ACCOUNTADMIN
+      database: BANKING
+      warehouse: COMPUTE_WH
+      schema: ANALYTICS
+      threads: 1

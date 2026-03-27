@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw_banking
+    database: BANKING
+    schema: RAW_BANKING
+    tables:
+      - name: accounts
+      - name: customers
+      - name: transactions
+      - name: loans
+      - name: branches
+      - name: employees
