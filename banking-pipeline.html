@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Real-Time Banking Pipeline — Shees Ali Akbar</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #04080f;
+  --surface: #080f1a;
+  --card: #0c1624;
+  --border: #162030;
+  --border-bright: #1e3048;
+  --text: #d8e8f8;
+  --muted: #4a6480;
+  --dim: #2a3f58;
+  --red: #ff3c3c;
+  --red-soft: rgba(255,60,60,0.12);
+  --yellow: #f5c842;
+  --yellow-soft: rgba(245,200,66,0.1);
+  --blue: #2196f3;
+  --blue-soft: rgba(33,150,243,0.1);
+  --cyan: #00d4ff;
+  --cyan-soft: rgba(0,212,255,0.1);
+  --snow: #29b5e8;
+  --snow-soft: rgba(41,181,232,0.1);
+  --orange: #ff6b35;
+  --orange-soft: rgba(255,107,53,0.1);
+  --green: #00e676;
+  --green-soft: rgba(0,230,118,0.1);
+  --purple: #b06cff;
+  --purple-soft: rgba(176,108,255,0.1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(33,150,243,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(33,150,243,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+.page { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; padding: 32px 16px 80px; }
+
+/* HEADER */
+.header { text-align: center; margin-bottom: 48px; }
+.header-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--red-soft);
+  border: 1px solid rgba(255,60,60,0.25);
+  color: var(--red);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase;
+  padding: 5px 14px; border-radius: 2px; margin-bottom: 16px;
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red);
+  animation: blink 1.2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.header-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(36px, 9vw, 64px);
+  letter-spacing: 3px; line-height: 1; color: #fff; margin-bottom: 6px;
+}
+.header-title span { color: var(--cyan); }
+.header-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 20px;
+}
+.flow-bar {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  align-items: center; gap: 4px;
+}
+.flow-pill {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; padding: 4px 10px; border-radius: 2px;
+  border: 1px solid; letter-spacing: 0.5px; white-space: nowrap;
+}
+.flow-arrow { color: var(--muted); font-size: 12px; }
+
+/* PIPELINE VISUAL */
+.pipeline-visual {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px 16px;
+  margin-bottom: 32px; overflow-x: auto;
+}
+.pipeline-nodes {
+  display: flex; align-items: center; gap: 0; min-width: 600px;
+}
+.p-node { flex: 1; text-align: center; }
+.p-node-icon {
+  width: 48px; height: 48px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin: 0 auto 6px; border: 1px solid;
+}
+.p-node-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 0.5px; color: var(--muted);
+}
+.p-node-name { font-size: 10px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.p-arrow { color: var(--dim); font-size: 16px; flex-shrink: 0; padding: 0 2px; padding-bottom: 20px; }
+
+/* STAGES */
+.stage {
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--card); margin-bottom: 10px;
+  overflow: hidden; cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s;
+  animation: rise 0.5s ease both;
+}
+@keyframes rise { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.stage:nth-child(1){animation-delay:0.05s}
+.stage:nth-child(2){animation-delay:0.1s}
+.stage:nth-child(3){animation-delay:0.15s}
+.stage:nth-child(4){animation-delay:0.2s}
+.stage:nth-child(5){animation-delay:0.25s}
+.stage:nth-child(6){animation-delay:0.3s}
+.stage:nth-child(7){animation-delay:0.35s}
+.stage:hover { transform: translateY(-1px); }
+.stage-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 18px; position: relative;
+}
+.stage-head::after {
+  content: '›'; position: absolute; right: 18px;
+  color: var(--muted); font-size: 20px;
+  transition: transform 0.3s; line-height: 1;
+}
+.stage.open .stage-head::after { transform: rotate(90deg); }
+.stage-head::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px; border-radius: 8px 0 0 0;
+}
+.s-icon {
+  width: 40px; height: 40px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0; border: 1px solid;
+}
+.s-meta { flex: 1; min-width: 0; }
+.s-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 2px;
+}
+.s-title { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; }
+.s-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.stage-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+.stage.open .stage-body { max-height: 800px; }
+.stage-inner { padding: 0 18px 18px; }
+.divider { height: 1px; background: var(--border); margin-bottom: 14px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.chip {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+}
+.chip-name { font-size: 11px; font-weight: 500; color: var(--text); margin-bottom: 2px; font-family: 'IBM Plex Mono', monospace; }
+.chip-desc { font-size: 10px; color: var(--muted); line-height: 1.5; }
+.feats { list-style: none; }
+.feats li {
+  font-size: 12px; color: var(--muted); padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  display: flex; gap: 8px; align-items: flex-start; line-height: 1.5;
+}
+.feats li:last-child { border-bottom: none; }
+.feats li b { color: var(--text); font-weight: 500; }
+.pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+.pill {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; padding: 3px 8px; border-radius: 2px;
+  border: 1px solid; letter-spacing: 0.5px;
+}
+
+/* COLOR THEMES */
+.s-postgres .stage-head::before { background: var(--purple); }
+.s-postgres .s-icon { background: var(--purple-soft); border-color: rgba(176,108,255,0.25); }
+.s-postgres .s-num,.s-postgres .s-title { color: var(--purple); }
+.s-postgres:hover { border-color: rgba(176,108,255,0.3); }
+.s-debezium .stage-head::before { background: var(--red); }
+.s-debezium .s-icon { background: var(--red-soft); border-color: rgba(255,60,60,0.25); }
+.s-debezium .s-num,.s-debezium .s-title { color: var(--red); }
+.s-debezium:hover { border-color: rgba(255,60,60,0.3); }
+.s-kafka .stage-head::before { background: var(--yellow); }
+.s-kafka .s-icon { background: var(--yellow-soft); border-color: rgba(245,200,66,0.25); }
+.s-kafka .s-num,.s-kafka .s-title { color: var(--yellow); }
+.s-kafka:hover { border-color: rgba(245,200,66,0.3); }
+.s-minio .stage-head::before { background: var(--cyan); }
+.s-minio .s-icon { background: var(--cyan-soft); border-color: rgba(0,212,255,0.25); }
+.s-minio .s-num,.s-minio .s-title { color: var(--cyan); }
+.s-minio:hover { border-color: rgba(0,212,255,0.3); }
+.s-snowflake .stage-head::before { background: var(--snow); }
+.s-snowflake .s-icon { background: var(--snow-soft); border-color: rgba(41,181,232,0.25); }
+.s-snowflake .s-num,.s-snowflake .s-title { color: var(--snow); }
+.s-snowflake:hover { border-color: rgba(41,181,232,0.3); }
+.s-dbt .stage-head::before { background: var(--orange); }
+.s-dbt .s-icon { background: var(--orange-soft); border-color: rgba(255,107,53,0.25); }
+.s-dbt .s-num,.s-dbt .s-title { color: var(--orange); }
+.s-dbt:hover { border-color: rgba(255,107,53,0.3); }
+.s-analytics .stage-head::before { background: var(--green); }
+.s-analytics .s-icon { background: var(--green-soft); border-color: rgba(0,230,118,0.25); }
+.s-analytics .s-num,.s-analytics .s-title { color: var(--green); }
+.s-analytics:hover { border-color: rgba(0,230,118,0.3); }
+
+/* MEDALLION */
+.medallion { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 12px 0; }
+.medal { border-radius: 6px; padding: 10px; border: 1px solid; text-align: center; }
+.medal-icon { font-size: 20px; margin-bottom: 4px; }
+.medal-name { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; margin-bottom: 4px; }
+.medal-desc { font-size: 10px; color: var(--muted); line-height: 1.5; }
+.m-bronze { background: rgba(205,127,50,0.08); border-color: rgba(205,127,50,0.25); }
+.m-bronze .medal-name { color: #cd7f32; }
+.m-silver { background: rgba(168,184,200,0.08); border-color: rgba(168,184,200,0.25); }
+.m-silver .medal-name { color: #a8b8c8; }
+.m-gold { background: rgba(245,196,24,0.08); border-color: rgba(245,196,24,0.25); }
+.m-gold .medal-name { color: #f5c418; }
+
+/* FOOTER */
+.footer {
+  margin-top: 48px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 24px 20px; text-align: center;
+}
+.footer-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px; letter-spacing: 2px; color: #fff; margin-bottom: 4px;
+}
+.footer-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-bottom: 16px;
+}
+.footer-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.footer-link {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; padding: 7px 16px; border-radius: 4px;
+  text-decoration: none; border: 1px solid; letter-spacing: 0.5px;
+}
+.fl-gh { color: var(--text); border-color: var(--border-bright); background: transparent; }
+.fl-li { color: #4d9de0; border-color: rgba(77,157,224,0.3); background: rgba(77,157,224,0.08); }
+.footer-stack {
+  margin-top: 14px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; color: var(--dim); letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-eyebrow"><div class="live-dot"></div> Real-Time CDC Pipeline</div>
+    <div class="header-title">MODERN <span>BANKING</span><br>DATA STACK</div>
+    <div class="header-sub">by Shees Ali Akbar &nbsp;·&nbsp; Data Engineer</div>
+    <div class="flow-bar">
+      <span class="flow-pill" style="color:var(--purple);border-color:rgba(176,108,255,0.3);background:var(--purple-soft)">PostgreSQL</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-pill" style="color:var(--red);border-color:rgba(255,60,60,0.3);background:var(--red-soft)">Debezium</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-pill" style="color:var(--yellow);border-color:rgba(245,200,66,0.3);background:var(--yellow-soft)">Kafka</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-pill" style="color:var(--cyan);border-color:rgba(0,212,255,0.3);background:var(--cyan-soft)">MinIO</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-pill" style="color:var(--snow);border-color:rgba(41,181,232,0.3);background:var(--snow-soft)">Snowflake</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-pill" style="color:var(--orange);border-color:rgba(255,107,53,0.3);background:var(--orange-soft)">dbt</span>
+    </div>
+  </div>
+
+  <!-- PIPELINE VISUAL -->
+  <div class="pipeline-visual">
+    <div class="pipeline-nodes">
+      <div class="p-node">
+        <div class="p-node-icon" style="background:var(--purple-soft);border-color:rgba(176,108,255,0.3)">🐘</div>
+        <div class="p-node-name">PostgreSQL</div>
+        <div class="p-node-label">SOURCE</div>
+      </div>
+      <div class="p-arrow">⟶</div>
+      <div class="p-node">
+        <div class="p-node-icon" style="background:var(--red-soft);border-color:rgba(255,60,60,0.3)">🔴</div>
+        <div class="p-node-name">Debezium</div>
+        <div class="p-node-label">CDC</div>
+      </div>
+      <div class="p-arrow">⟶</div>
+      <div class="p-node">
+        <div class="p-node-icon" style="background:var(--yellow-soft);border-color:rgba(245,200,66,0.3)">📨</div>
+        <div class="p-node-name">Kafka</div>
+        <div class="p-node-label">STREAM</div>
+      </div>
+      <div class="p-arrow">⟶</div>
+      <div class="p-node">
+        <div class="p-node-icon" style="background:var(--cyan-soft);border-color:rgba(0,212,255,0.3)">🗄️</div>
+        <div class="p-node-name">MinIO</div>
+        <div class="p-node-label">DATA LAKE</div>
+      </div>
+      <div class="p-arrow">⟶</div>
+      <div class="p-node">
+        <div class="p-node-icon" style="background:var(--snow-soft);border-color:rgba(41,181,232,0.3)">❄️</div>
+        <div class="p-node-name">Snowflake</div>
+        <div class="p-node-label">WAREHOUSE</div>
+      </div>
+      <div class="p-arrow">⟶</div>
+      <div class="p-node">
+        <div class="p-node-icon" style="background:var(--orange-soft);border-color:rgba(255,107,53,0.3)">⚙️</div>
+        <div class="p-node-name">dbt</div>
+        <div class="p-node-label">TRANSFORM</div>
+      </div>
+      <div class="p-arrow">⟶</div>
+      <div class="p-node">
+        <div class="p-node-icon" style="background:var(--green-soft);border-color:rgba(0,230,118,0.3)">📊</div>
+        <div class="p-node-name">Analytics</div>
+        <div class="p-node-label">INSIGHTS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage s-postgres open" onclick="toggle(this)">
+    <div class="stage-head">
+      <div class="s-icon">🐘</div>
+      <div class="s-meta">
+        <div class="s-num">Layer 01 · Source</div>
+        <div class="s-title">PostgreSQL</div>
+        <div class="s-sub">Transactional banking database — WAL enabled</div>
+      </div>
+    </div>
+    <div class="stage-body"><div class="stage-inner">
+      <div class="divider"></div>
+      <div class="grid2">
+        <div class="chip"><div class="chip-name">💳 Transactions</div><div class="chip-desc">Deposits, withdrawals, transfers</div></div>
+        <div class="chip"><div class="chip-name">👤 Customers</div><div class="chip-desc">Account & customer records</div></div>
+        <div class="chip"><div class="chip-name">📝 WAL Logging</div><div class="chip-desc">Logical replication mode enabled</div></div>
+        <div class="chip"><div class="chip-name">🐍 Data Generator</div><div class="chip-desc">Python simulates live transactions</div></div>
+      </div>
+      <ul class="feats">
+        <li>✦ <span>Production-like banking DB with <b>customers, accounts, transactions</b> tables</span></li>
+        <li>✦ <span>WAL configured in <b>logical replication mode</b> — required for Debezium CDC</span></li>
+        <li>✦ <span>Python data generator simulates <b>continuous real-world banking activity</b></span></li>
+      </ul>
+      <div class="pills">
+        <span class="pill" style="color:var(--purple);border-color:rgba(176,108,255,0.3)">PostgreSQL</span>
+        <span class="pill" style="color:var(--purple);border-color:rgba(176,108,255,0.3)">WAL</span>
+        <span class="pill" style="color:var(--purple);border-color:rgba(176,108,255,0.3)">Docker</span>
+        <span class="pill" style="color:var(--purple);border-color:rgba(176,108,255,0.3)">Python</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage s-debezium" onclick="toggle(this)">
+    <div class="stage-head">
+      <div class="s-icon">🔴</div>
+      <div class="s-meta">
+        <div class="s-num">Layer 02 · CDC</div>
+        <div class="s-title">Debezium</div>
+        <div class="s-sub">Change Data Capture — reads PostgreSQL WAL</div>
+      </div>
+    </div>
+    <div class="stage-body"><div class="stage-inner">
+      <div class="divider"></div>
+      <div class="grid2">
+        <div class="chip"><div class="chip-name">📖 WAL Reader</div><div class="chip-desc">Reads DB change log in real-time</div></div>
+        <div class="chip"><div class="chip-name">🔗 Kafka Connect</div><div class="chip-desc">Built on Kafka Connect framework</div></div>
+        <div class="chip"><div class="chip-name">⚡ Row-level</div><div class="chip-desc">Captures every INSERT / UPDATE / DELETE</div></div>
+        <div class="chip"><div class="chip-name">🛡️ Non-invasive</div><div class="chip-desc">Zero impact on source database</div></div>
+      </div>
+      <ul class="feats">
+        <li>✦ <span>Captures <b>before + after state</b> of every changed row with operation type & timestamp</span></li>
+        <li>✦ <span><b>Zero additional load</b> on PostgreSQL — reads WAL without queries or triggers</span></li>
+        <li>✦ <span>Connector configured via <b>my_connector.json</b> — topics, tables, serialization</span></li>
+      </ul>
+      <div class="pills">
+        <span class="pill" style="color:var(--red);border-color:rgba(255,60,60,0.3)">Debezium</span>
+        <span class="pill" style="color:var(--red);border-color:rgba(255,60,60,0.3)">Kafka Connect</span>
+        <span class="pill" style="color:var(--red);border-color:rgba(255,60,60,0.3)">WAL Logs</span>
+        <span class="pill" style="color:var(--red);border-color:rgba(255,60,60,0.3)">CDC</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage s-kafka" onclick="toggle(this)">
+    <div class="stage-head">
+      <div class="s-icon">📨</div>
+      <div class="s-meta">
+        <div class="s-num">Layer 03 · Streaming</div>
+        <div class="s-title">Apache Kafka + Schema Registry</div>
+        <div class="s-sub">High-throughput event streaming with schema enforcement</div>
+      </div>
+    </div>
+    <div class="stage-body"><div class="stage-inner">
+      <div class="divider"></div>
+      <div class="grid2">
+        <div class="chip"><div class="chip-name">📨 Apache Kafka</div><div class="chip-desc">Distributed event streaming</div></div>
+        <div class="chip"><div class="chip-name">📋 Schema Registry</div><div class="chip-desc">Confluent — Avro enforcement</div></div>
+        <div class="chip"><div class="chip-name">📦 Topics</div><div class="chip-desc">One topic per source table</div></div>
+        <div class="chip"><div class="chip-name">🔄 Retention</div><div class="chip-desc">Replay on consumer failure</div></div>
+      </div>
+      <ul class="feats">
+        <li>✦ <span>Events partitioned by transaction type for <b>parallel consumer processing</b></span></li>
+        <li>✦ <span>Schema Registry <b>rejects malformed messages</b> before they enter the pipeline</span></li>
+        <li>✦ <span>Message retention enables <b>fault-tolerant replay</b> — no data loss on failure</span></li>
+      </ul>
+      <div class="pills">
+        <span class="pill" style="color:var(--yellow);border-color:rgba(245,200,66,0.3)">Kafka</span>
+        <span class="pill" style="color:var(--yellow);border-color:rgba(245,200,66,0.3)">Schema Registry</span>
+        <span class="pill" style="color:var(--yellow);border-color:rgba(245,200,66,0.3)">Avro</span>
+        <span class="pill" style="color:var(--yellow);border-color:rgba(245,200,66,0.3)">Zookeeper</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage s-minio" onclick="toggle(this)">
+    <div class="stage-head">
+      <div class="s-icon">🗄️</div>
+      <div class="s-meta">
+        <div class="s-num">Layer 04 · Data Lake</div>
+        <div class="s-title">MinIO + Python Consumer</div>
+        <div class="s-sub">S3-compatible object storage — Parquet format</div>
+      </div>
+    </div>
+    <div class="stage-body"><div class="stage-inner">
+      <div class="divider"></div>
+      <div class="grid2">
+        <div class="chip"><div class="chip-name">🗄️ MinIO</div><div class="chip-desc">S3-compatible self-hosted lake</div></div>
+        <div class="chip"><div class="chip-name">📁 Parquet</div><div class="chip-desc">Columnar — fast analytics</div></div>
+        <div class="chip"><div class="chip-name">🐍 Consumer</div><div class="chip-desc">Python reads Kafka → writes MinIO</div></div>
+        <div class="chip"><div class="chip-name">📂 Partitioned</div><div class="chip-desc">By date & table for efficient load</div></div>
+      </div>
+      <ul class="feats">
+        <li>✦ <span>Python consumer deserializes Avro events and writes <b>Parquet files to MinIO</b></span></li>
+        <li>✦ <span>Parquet chosen for <b>columnar storage efficiency</b> — faster for analytics queries</span></li>
+        <li>✦ <span>MinIO configured as <b>external stage in Snowflake</b> — direct read without copying</span></li>
+      </ul>
+      <div class="pills">
+        <span class="pill" style="color:var(--cyan);border-color:rgba(0,212,255,0.3)">MinIO</span>
+        <span class="pill" style="color:var(--cyan);border-color:rgba(0,212,255,0.3)">Parquet</span>
+        <span class="pill" style="color:var(--cyan);border-color:rgba(0,212,255,0.3)">Python</span>
+        <span class="pill" style="color:var(--cyan);border-color:rgba(0,212,255,0.3)">S3-Compatible</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage s-snowflake" onclick="toggle(this)">
+    <div class="stage-head">
+      <div class="s-icon">❄️</div>
+      <div class="s-meta">
+        <div class="s-num">Layer 05 · Warehouse</div>
+        <div class="s-title">Snowflake + Airflow</div>
+        <div class="s-sub">Cloud data warehouse — COPY INTO from MinIO stage</div>
+      </div>
+    </div>
+    <div class="stage-body"><div class="stage-inner">
+      <div class="divider"></div>
+      <div class="grid2">
+        <div class="chip"><div class="chip-name">❄️ Snowflake</div><div class="chip-desc">Cloud analytics warehouse</div></div>
+        <div class="chip"><div class="chip-name">🔄 COPY INTO</div><div class="chip-desc">Bulk load from MinIO stage</div></div>
+        <div class="chip"><div class="chip-name">🌪️ Airflow DAGs</div><div class="chip-desc">Detects files → triggers load</div></div>
+        <div class="chip"><div class="chip-name">📂 External Stage</div><div class="chip-desc">MinIO as Snowflake stage</div></div>
+      </div>
+      <ul class="feats">
+        <li>✦ <span>Airflow <b>file sensor monitors MinIO</b> — triggers COPY INTO when new Parquet arrives</span></li>
+        <li>✦ <span>Raw schema preserves <b>Bronze layer data exactly as loaded</b> — no transformation</span></li>
+        <li>✦ <span>Snowflake <b>auto-scales compute</b> on demand — scales to zero when idle</span></li>
+      </ul>
+      <div class="pills">
+        <span class="pill" style="color:var(--snow);border-color:rgba(41,181,232,0.3)">Snowflake</span>
+        <span class="pill" style="color:var(--snow);border-color:rgba(41,181,232,0.3)">Airflow</span>
+        <span class="pill" style="color:var(--snow);border-color:rgba(41,181,232,0.3)">COPY INTO</span>
+        <span class="pill" style="color:var(--snow);border-color:rgba(41,181,232,0.3)">External Stage</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage s-dbt" onclick="toggle(this)">
+    <div class="stage-head">
+      <div class="s-icon">⚙️</div>
+      <div class="s-meta">
+        <div class="s-num">Layer 06 · Transform</div>
+        <div class="s-title">dbt — Medallion Architecture</div>
+        <div class="s-sub">Bronze → Silver → Gold inside Snowflake</div>
+      </div>
+    </div>
+    <div class="stage-body"><div class="stage-inner">
+      <div class="divider"></div>
+      <div class="medallion">
+        <div class="medal m-bronze">
+          <div class="medal-icon">🥉</div>
+          <div class="medal-name">BRONZE</div>
+          <div class="medal-desc">Raw CDC events — as loaded. Full history preserved.</div>
+        </div>
+        <div class="medal m-silver">
+          <div class="medal-icon">🥈</div>
+          <div class="medal-name">SILVER</div>
+          <div class="medal-desc">Dedup · Type casting · CDC op filtering · Nulls</div>
+        </div>
+        <div class="medal m-gold">
+          <div class="medal-icon">🥇</div>
+          <div class="medal-name">GOLD</div>
+          <div class="medal-desc">Balances · Fraud signals · Customer summaries</div>
+        </div>
+      </div>
+      <ul class="feats">
+        <li>✦ <span>Silver handles <b>CDC op filtering</b> — INSERT, UPDATE, DELETE treated correctly</span></li>
+        <li>✦ <span>dbt tests enforce <b>not_null, unique, referential integrity</b> at every layer</span></li>
+        <li>✦ <span>Pipeline stops automatically if <b>any test fails</b> — bad data never reaches Gold</span></li>
+      </ul>
+      <div class="pills">
+        <span class="pill" style="color:var(--orange);border-color:rgba(255,107,53,0.3)">dbt</span>
+        <span class="pill" style="color:var(--orange);border-color:rgba(255,107,53,0.3)">Medallion</span>
+        <span class="pill" style="color:var(--orange);border-color:rgba(255,107,53,0.3)">dbt Tests</span>
+        <span class="pill" style="color:var(--orange);border-color:rgba(255,107,53,0.3)">Jinja SQL</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- STAGE 7 -->
+  <div class="stage s-analytics" onclick="toggle(this)">
+    <div class="stage-head">
+      <div class="s-icon">📊</div>
+      <div class="s-meta">
+        <div class="s-num">Layer 07 · Analytics</div>
+        <div class="s-title">Business Insights</div>
+        <div class="s-sub">Real-time answers — balances, fraud, velocity</div>
+      </div>
+    </div>
+    <div class="stage-body"><div class="stage-inner">
+      <div class="divider"></div>
+      <div class="grid2">
+        <div class="chip"><div class="chip-name">💰 Account Balances</div><div class="chip-desc">Real-time balance per account</div></div>
+        <div class="chip"><div class="chip-name">🚨 Fraud Detection</div><div class="chip-desc">Transaction velocity analysis</div></div>
+        <div class="chip"><div class="chip-name">👤 Customer Summary</div><div class="chip-desc">Aggregated financial behaviour</div></div>
+        <div class="chip"><div class="chip-name">🐳 One Command</div><div class="chip-desc">docker-compose up -d</div></div>
+      </div>
+      <ul class="feats">
+        <li>✦ <span><b>Real-time account balances</b> — derived from full transaction history, updated instantly</span></li>
+        <li>✦ <span><b>Transaction velocity</b> — high-frequency patterns flagged for fraud analysis</span></li>
+        <li>✦ <span>Entire stack runs with <b>docker-compose up -d</b> — fully reproducible anywhere</span></li>
+      </ul>
+      <div class="pills">
+        <span class="pill" style="color:var(--green);border-color:rgba(0,230,118,0.3)">Real-Time</span>
+        <span class="pill" style="color:var(--green);border-color:rgba(0,230,118,0.3)">Docker Compose</span>
+        <span class="pill" style="color:var(--green);border-color:rgba(0,230,118,0.3)">Analytics</span>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-name">SHEES ALI AKBAR</div>
+    <div class="footer-role">DATA ENGINEER · LAHORE, PAKISTAN</div>
+    <div class="footer-links">
+      <a href="https://github.com/Sheesaliakbar/modern-banking-data-pipeline" class="footer-link fl-gh">⭐ GitHub Repo</a>
+      <a href="https://www.linkedin.com/in/sheesaliakbar6169/" class="footer-link fl-li">💼 LinkedIn</a>
+    </div>
+    <div class="footer-stack">PostgreSQL · Debezium · Kafka · MinIO · Snowflake · dbt · Airflow · Docker</div>
+  </div>
+
+</div>
+<script>
+function toggle(el) { el.classList.toggle('open'); }
+</script>
+</body>
+</html>
